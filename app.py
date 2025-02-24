@@ -1,16 +1,13 @@
 import streamlit as st
+import fitz  # PyMuPDF
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import os
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-import google.generativeai as genai
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
-import fitz  # PyMuPDF
-from pdf2image import convert_from_path
-import pytesseract
+import os
 
 # Configuración inicial
 load_dotenv()
@@ -19,22 +16,8 @@ if not api_key:
     st.error("GOOGLE_API_KEY no está configurada en las variables de entorno.")
     st.stop()
 
-genai.configure(api_key=api_key)
-
-def extract_text_with_ocr(pdf_path):
-    """Extrae texto de un PDF usando OCR."""
-    try:
-        text = ""
-        images = convert_from_path(pdf_path)
-        for image in images:
-            text += pytesseract.image_to_string(image)
-        return text
-    except Exception as e:
-        st.error(f"Error al procesar PDF con OCR: {str(e)}")
-        return None
-
 def get_pdf_text(pdf_docs):
-    """Extrae texto de los documentos PDF usando PyMuPDF y OCR como respaldo."""
+    """Extrae texto de los documentos PDF usando PyMuPDF."""
     try:
         text = ""
         for pdf in pdf_docs:
@@ -42,22 +25,21 @@ def get_pdf_text(pdf_docs):
             with open("temp.pdf", "wb") as temp_file:
                 temp_file.write(pdf.getvalue())
 
-            # Intentar extraer texto con PyMuPDF
+            # Abrir el PDF con PyMuPDF
             doc = fitz.open("temp.pdf")
+
+            # Extraer texto de cada página
             for page in doc:
                 text += page.get_text()
-            doc.close()
 
-            # Si no se pudo extraer texto, usar OCR
-            if not text.strip():
-                st.warning(f"No se pudo extraer texto del archivo {pdf.name}. Intentando con OCR...")
-                text = extract_text_with_ocr("temp.pdf")
+            # Cerrar el documento
+            doc.close()
 
             # Eliminar archivo temporal
             os.remove("temp.pdf")
 
         if not text.strip():
-            raise ValueError("No se pudo extraer texto de los PDFs")
+            raise ValueError("No se pudo extraer texto del PDF. Es posible que el archivo contenga texto como imágenes.")
         return text
     except Exception as e:
         st.error(f"Error al procesar PDF: {str(e)}")
