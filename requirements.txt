@@ -3,7 +3,9 @@ google-generativeai
 python-dotenv
 langchain
 langchain-community
-PyPDF2
+PyMuPDF
 chromadb
 faiss-cpu
 langchain-google-genai
+pdf2image
+pytesseract
